@@ -241,7 +241,10 @@ export async function POST(req: NextRequest) {
     if (!message && !imageDataUrl) return Response.json({ error: "empty_message" }, { status: 400 });
     const history: HistoryMsg[] = Array.isArray(body.history)
       ? body.history
-          .map((h) => ({ role: h.role === "assistant" ? "assistant" : "user", content: String(h.content ?? "").slice(0, 1200) }))
+          .map((h): HistoryMsg => ({
+            role: h.role === "assistant" ? "assistant" : "user",
+            content: String(h.content ?? "").slice(0, 1200),
+          }))
           .filter((h) => h.content.length > 0)
       : [];
 

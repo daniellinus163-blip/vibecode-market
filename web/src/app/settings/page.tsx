@@ -178,13 +178,14 @@ export default function SettingsPage() {
         return;
       }
     }
+    const row = data as ProfileRow | null;
     setProfile({
       id: uid,
-      full_name: data?.full_name ?? "",
-      username: data?.username ?? "",
-      avatar_url: data?.avatar_url ?? (typeof window !== "undefined" ? window.localStorage.getItem(AVATAR_STORAGE_KEY) ?? "" : ""),
-      updated_at: data?.updated_at ?? "",
-      email: data?.email ?? email,
+      full_name: row?.full_name ?? "",
+      username: row?.username ?? "",
+      avatar_url: row?.avatar_url ?? (typeof window !== "undefined" ? window.localStorage.getItem(AVATAR_STORAGE_KEY) ?? "" : ""),
+      updated_at: row?.updated_at ?? "",
+      email: row?.email ?? email,
     });
   }
 
@@ -295,16 +296,16 @@ export default function SettingsPage() {
     setSaving(true);
     setError(null);
     setMessage(null);
-    let patch: Record<string, unknown> = {
+    const patch: Record<string, unknown> = {
       full_name: profile.full_name || null,
       username: profile.username || null,
       avatar_url: profile.avatar_url || null,
       email: userEmail,
       updated_at: new Date().toISOString(),
     };
-    let { error: e1 } = await supabase.from("profiles").upsert({ id: userId, ...patch });
+    let { error: e1 } = await supabase.from("profiles").upsert({ id: userId, ...patch } as never);
     if (e1 && isMissingColumnError(e1.message)) {
-      ({ error: e1 } = await supabase.from("profiles").upsert({ id: userId, email: userEmail }));
+      ({ error: e1 } = await supabase.from("profiles").upsert({ id: userId, email: userEmail } as never));
       const metaPayload = {
         full_name: String(profile.full_name ?? ""),
         username: String(profile.username ?? ""),
@@ -340,9 +341,9 @@ export default function SettingsPage() {
     setSaving(true);
     setError(null);
     setMessage(null);
-    if (addressForm.is_default) await supabase.from("addresses").update({ is_default: false }).eq("user_id", userId);
+    if (addressForm.is_default) await supabase.from("addresses").update({ is_default: false } as never).eq("user_id", userId);
     if (editingAddressId) {
-      const { error } = await supabase.from("addresses").update(addressForm).eq("id", editingAddressId).eq("user_id", userId);
+      const { error } = await supabase.from("addresses").update(addressForm as never).eq("id", editingAddressId).eq("user_id", userId);
       if (error && isMissingTableError(error.message)) {
         if (typeof window !== "undefined") {
           const current = JSON.parse(window.localStorage.getItem(LOCAL_ADDRESSES_KEY) ?? "[]") as AddressRow[];
@@ -354,7 +355,7 @@ export default function SettingsPage() {
       } else if (error) setError(error.message);
       else setMessage("Address updated.");
     } else {
-      const { error } = await supabase.from("addresses").insert({ ...addressForm, user_id: userId });
+      const { error } = await supabase.from("addresses").insert({ ...addressForm, user_id: userId } as never);
       if (error && isMissingTableError(error.message)) {
         if (typeof window !== "undefined") {
           const current = JSON.parse(window.localStorage.getItem(LOCAL_ADDRESSES_KEY) ?? "[]") as AddressRow[];
@@ -385,8 +386,8 @@ export default function SettingsPage() {
 
   async function setDefaultAddress(id: string) {
     if (!supabase || !userId) return;
-    const a = await supabase.from("addresses").update({ is_default: false }).eq("user_id", userId);
-    const b = await supabase.from("addresses").update({ is_default: true }).eq("id", id).eq("user_id", userId);
+    const a = await supabase.from("addresses").update({ is_default: false } as never).eq("user_id", userId);
+    const b = await supabase.from("addresses").update({ is_default: true } as never).eq("id", id).eq("user_id", userId);
     if ((a.error && isMissingTableError(a.error.message)) || (b.error && isMissingTableError(b.error.message))) {
       if (typeof window !== "undefined") {
         const current = JSON.parse(window.localStorage.getItem(LOCAL_ADDRESSES_KEY) ?? "[]") as AddressRow[];
@@ -417,7 +418,7 @@ export default function SettingsPage() {
   async function addWishlistItem() {
     if (!supabase || !userId || !wishlistProductId.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from("wishlist").insert({ user_id: userId, product_id: wishlistProductId.trim() });
+    const { error } = await supabase.from("wishlist").insert({ user_id: userId, product_id: wishlistProductId.trim() } as never);
     if (error && isMissingTableError(error.message)) {
       if (typeof window !== "undefined") {
         const current = JSON.parse(window.localStorage.getItem(LOCAL_WISHLIST_KEY) ?? "[]") as WishlistRow[];
@@ -456,7 +457,11 @@ export default function SettingsPage() {
     setSaving(true);
     setError(null);
     setMessage(null);
-    const { error } = await supabase.from("notification_settings").upsert({ user_id: userId, ...notificationPrefs, updated_at: new Date().toISOString() });
+    const { error } = await supabase.from("notification_settings").upsert({
+      user_id: userId,
+      ...notificationPrefs,
+      updated_at: new Date().toISOString(),
+    } as never);
     if (error && isMissingTableError(error.message)) {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(LOCAL_NOTIFICATION_KEY, JSON.stringify(notificationPrefs));

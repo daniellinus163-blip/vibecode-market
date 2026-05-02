@@ -54,12 +54,13 @@ export async function requireAdminUser() {
   const userId = authData.user.id;
   const email = (authData.user.email ?? "").toLowerCase();
 
-  let profile: { id: string; email?: string | null; is_admin?: boolean | null } | null = null;
+  type AdminProfileRow = { id: string; email?: string | null; is_admin?: boolean | null };
+  let profile: AdminProfileRow | null = null;
   const pr1 = await service.from("profiles").select("id,email,is_admin").eq("id", userId).maybeSingle();
-  if (!pr1.error && pr1.data) profile = pr1.data as typeof profile;
+  if (!pr1.error && pr1.data) profile = pr1.data as AdminProfileRow;
   else if (pr1.error && columnMissingFromPostgrest(pr1.error.message ?? "", "is_admin")) {
     const pr2 = await service.from("profiles").select("id,email").eq("id", userId).maybeSingle();
-    if (!pr2.error && pr2.data) profile = { ...(pr2.data as any), is_admin: false };
+    if (!pr2.error && pr2.data) profile = { ...(pr2.data as AdminProfileRow), is_admin: false };
   }
 
   let inAdminUsersTable = false;

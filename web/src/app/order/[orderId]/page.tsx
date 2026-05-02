@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { AnimatePresence, motion } from "framer-motion";
 import * as Progress from "@radix-ui/react-progress";
@@ -31,8 +32,9 @@ function stepIndex(status: OrderStatus) {
   return idx < 0 ? 0 : idx;
 }
 
-export default function OrderTrackingPage({ params }: { params: { orderId: string } }) {
-  const orderId = params.orderId;
+export default function OrderTrackingPage() {
+  const params = useParams();
+  const orderId = typeof params?.orderId === "string" ? params.orderId : "";
   const [status, setStatus] = useState<OrderStatus>("placed");
   const [events, setEvents] = useState<StatusEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,12 +46,14 @@ export default function OrderTrackingPage({ params }: { params: { orderId: strin
   }, [status]);
 
   useEffect(() => {
+    if (!orderId) return;
     apiGet("/api/user/profile").catch(() => {
       // Do not auto-redirect unexpectedly while user is browsing.
     });
   }, [orderId]);
 
   useEffect(() => {
+    if (!orderId) return;
     let mounted = true;
     apiGet<{ status: OrderStatus; statusEvents: StatusEvent[] }>(`/api/orders/${orderId}/track`)
       .then((r) => {
@@ -64,6 +68,7 @@ export default function OrderTrackingPage({ params }: { params: { orderId: strin
   }, [orderId]);
 
   useEffect(() => {
+    if (!orderId) return;
     const s: Socket = io(API_URL, { withCredentials: true, transports: ["websocket"] });
     s.emit("orders:watch", { orderId });
     s.on("order:status", (payload: any) => {
@@ -76,6 +81,14 @@ export default function OrderTrackingPage({ params }: { params: { orderId: strin
       s.disconnect();
     };
   }, [orderId]);
+
+  if (!orderId) {
+    return (
+      <main className="mx-auto max-w-5xl px-5 pb-24 pt-10">
+        <p className="text-sm text-white/70">Order not found.</p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-5 pb-24 pt-10">
