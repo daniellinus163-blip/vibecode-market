@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Next.js
+web/.next/
+web/out/
+
+# Build / cache
+dist/
+build/
+*.tsbuildinfo
+.cache/
+
+# Env & secrets (never commit these)
+.env
+.env.*
+!.env.example
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE / tooling (optional — remove .cursor line if you want to commit Cursor config)
+.cursor/
+
+# Uploads (keep local only unless you intend to version assets)
+web/public/uploads/
