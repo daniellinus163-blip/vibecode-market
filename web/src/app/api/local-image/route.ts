@@ -32,25 +32,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const seed = encodeURIComponent(`vibecode-catalog-${id}`);
-  try {
-    const upstream = await fetch(`https://picsum.photos/seed/${seed}/480/640`, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(12000),
-    });
-    if (upstream.ok) {
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      const ct = upstream.headers.get("content-type") ?? "image/jpeg";
-      return new Response(buf, {
-        headers: {
-          "content-type": ct,
-          "cache-control": "public, max-age=86400",
-        },
-      });
-    }
-  } catch {
-    /* fall through */
-  }
-
   return new Response("Not found", { status: 404 });
 }
