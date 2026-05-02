@@ -10,7 +10,11 @@ function normalizeBase(url: string) {
 export function getPublicApiBase(): string {
   const env = normalizeBase(process.env.NEXT_PUBLIC_API_URL?.trim() ?? "");
   if (env) return env;
-  if (typeof window !== "undefined") return "";
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return "http://127.0.0.1:4000";
+    return "";
+  }
   return "http://127.0.0.1:4000";
 }
 

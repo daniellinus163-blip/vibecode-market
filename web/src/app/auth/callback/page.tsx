@@ -17,11 +17,18 @@ export default function AuthCallbackPage() {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) throw new Error("supabase_missing");
-        const { data } = await supabase.auth.getSession();
-        const accessToken = data.session?.access_token;
+
+        let session = (await supabase.auth.getSession()).data.session;
+        if (!session?.access_token) {
+          await new Promise((r) => setTimeout(r, 80));
+          session = (await supabase.auth.getSession()).data.session;
+        }
+        const accessToken = session?.access_token;
         if (!accessToken) throw new Error("session_missing");
 
-        const res = await fetch(`${getPublicApiBase()}/api/auth/oauth/sync`, {
+        const apiBase = getPublicApiBase();
+        const syncUrl = `${apiBase}/api/auth/oauth/sync`;
+        const res = await fetch(syncUrl, {
           method: "POST",
           credentials: "include",
           headers: { "content-type": "application/json" },
@@ -32,13 +39,15 @@ export default function AuthCallbackPage() {
         window.location.href = nextPath;
       } catch {
         if (!alive) return;
-        setMessage("Google sign-in could not be completed. Please try again.");
+        setMessage(
+          "Google sign-in could not be completed. On localhost, run the API server on port 4000 (`npm run dev` from repo root), or set NEXT_PUBLIC_API_URL to your API URL."
+        );
       }
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [nextPath]);
 
   return (
     <main className="mx-auto max-w-lg px-5 py-24">
