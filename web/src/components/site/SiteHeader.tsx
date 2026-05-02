@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { cartCount, useCartStore } from "@/store/cartStore";
-import { API_URL } from "@/lib/api";
+import { getPublicApiBase } from "@/lib/api";
+import { sameSiteImageSrc } from "@/lib/publicAssets";
 
 const AVATAR_STORAGE_KEY = "vibecode_avatar_url";
 const REMOVED_IMAGE_TOKEN = "78367fb2-5e83-4160-a25a-5b66808fa94f";
@@ -46,14 +47,14 @@ export function SiteHeader() {
     const safe = sanitizeAvatar(localAvatar);
     if (localAvatar !== safe) window.localStorage.removeItem(AVATAR_STORAGE_KEY);
     if (safe) setAvatarUrl(safe);
-    fetch(`${API_URL}/api/user/profile`, { credentials: "include" })
+    fetch(`${getPublicApiBase()}/api/user/profile`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((r) => {
         const url = sanitizeAvatar(String(r?.user?.avatarUrl ?? ""));
         if (typeof url === "string" && url.length > 0) setAvatarUrl(url);
       })
       .catch(() => {});
-    fetch(`${API_URL}/api/auth/me`, { credentials: "include" })
+    fetch(`${getPublicApiBase()}/api/auth/me`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((r) => {
         const email = String(r?.user?.email ?? "").toLowerCase();
@@ -130,7 +131,7 @@ export function SiteHeader() {
             aria-label="Settings"
           >
             {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
+              <img src={sameSiteImageSrc(avatarUrl)} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
             ) : (
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/15 text-[12px]">⚙</span>
             )}

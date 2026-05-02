@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ProductCard } from "@/components/shop/ProductCard";
 import type { Category, Product } from "@/lib/types";
-import { API_URL } from "@/lib/api";
+import { getPublicApiBase } from "@/lib/api";
 import { clothPairByCategory } from "@/lib/catalogImages";
 
 function firstPrice(p: Product) {
@@ -85,7 +85,7 @@ export function MarketplaceHome({ products }: { products: Product[] }) {
     const ac = new AbortController();
     const timeout = window.setTimeout(() => ac.abort(), 2500);
     setLoadingProducts(true);
-    fetch(`${API_URL}/api/products`, { credentials: "include", signal: ac.signal })
+    fetch(`${getPublicApiBase()}/api/products`, { credentials: "include", signal: ac.signal })
       .then((r) => r.json())
       .then((r) => {
         if (!mounted) return;

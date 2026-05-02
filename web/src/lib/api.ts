@@ -1,7 +1,21 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+function normalizeBase(url: string) {
+  return url.replace(/\/$/, "");
+}
+
+/**
+ * Browser: empty string → same-origin fetch (when Express isn’t deployed).
+ * Server (SSR): defaults to local Express on 127.0.0.1:4000 when env unset.
+ * Set NEXT_PUBLIC_API_URL to your deployed API (https://…) for production API + sockets.
+ */
+export function getPublicApiBase(): string {
+  const env = normalizeBase(process.env.NEXT_PUBLIC_API_URL?.trim() ?? "");
+  if (env) return env;
+  if (typeof window !== "undefined") return "";
+  return "http://127.0.0.1:4000";
+}
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getPublicApiBase()}${path}`, {
     ...init,
     credentials: "include",
     headers: {
@@ -15,7 +29,7 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getPublicApiBase()}${path}`, {
     method: "POST",
     ...init,
     credentials: "include",
@@ -30,7 +44,7 @@ export async function apiPost<T>(path: string, body: unknown, init?: RequestInit
 }
 
 export async function apiPatch<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getPublicApiBase()}${path}`, {
     method: "PATCH",
     ...init,
     credentials: "include",
@@ -45,7 +59,7 @@ export async function apiPatch<T>(path: string, body: unknown, init?: RequestIni
 }
 
 export async function apiDelete<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getPublicApiBase()}${path}`, {
     method: "DELETE",
     ...init,
     credentials: "include",
@@ -59,7 +73,7 @@ export async function apiDelete<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 export async function apiPut<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getPublicApiBase()}${path}`, {
     method: "PUT",
     ...init,
     credentials: "include",

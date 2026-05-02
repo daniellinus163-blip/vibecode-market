@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import { useCartStore } from "@/store/cartStore";
+import { sameSiteImageSrc } from "@/lib/publicAssets";
 
 function cents(c: number) {
   return (c / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -47,7 +48,7 @@ export function QuickView({ product }: { product: Product }) {
             >
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div className="relative aspect-[4/5] md:aspect-auto md:min-h-[520px]">
-                  <Image src={product.images.primary} alt={product.title} fill className="object-cover" />
+                  <Image src={sameSiteImageSrc(product.images.primary)} alt={product.title} fill className="object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent" />
                 </div>
                 <div className="p-6 md:p-8">
@@ -80,7 +81,7 @@ export function QuickView({ product }: { product: Product }) {
                             {
                               productId: product._id,
                               title: product.title,
-                              image: product.images.primary,
+                              image: sameSiteImageSrc(product.images.primary),
                               variantLabel: v0?.label ?? "default",
                               unitPriceCents: v0?.priceCents ?? 0,
                             },

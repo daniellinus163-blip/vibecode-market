@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { AnimatePresence, motion } from "framer-motion";
 import * as Progress from "@radix-ui/react-progress";
-import { apiGet, API_URL } from "@/lib/api";
+import { apiGet, getPublicApiBase } from "@/lib/api";
 
 type OrderStatus =
   | "placed"
@@ -69,7 +69,9 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     if (!orderId) return;
-    const s: Socket = io(API_URL, { withCredentials: true, transports: ["websocket"] });
+    const base = getPublicApiBase();
+    if (!base) return;
+    const s: Socket = io(base, { withCredentials: true, transports: ["websocket"] });
     s.emit("orders:watch", { orderId });
     s.on("order:status", (payload: any) => {
       if (payload?.orderId !== orderId) return;

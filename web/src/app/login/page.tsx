@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { API_URL, apiPost } from "@/lib/api";
+import { apiPost, getPublicApiBase } from "@/lib/api";
 import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
@@ -24,7 +24,7 @@ export default function LoginPage() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`${getPublicApiBase()}/api/auth/login`, {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },

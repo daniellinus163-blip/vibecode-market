@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API_URL } from "@/lib/api";
+import { getPublicApiBase } from "@/lib/api";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function AuthCallbackPage() {
@@ -21,7 +21,7 @@ export default function AuthCallbackPage() {
         const accessToken = data.session?.access_token;
         if (!accessToken) throw new Error("session_missing");
 
-        const res = await fetch(`${API_URL}/api/auth/oauth/sync`, {
+        const res = await fetch(`${getPublicApiBase()}/api/auth/oauth/sync`, {
           method: "POST",
           credentials: "include",
           headers: { "content-type": "application/json" },

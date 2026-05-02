@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ALL_CLOTH_IMAGE_IDS, clothImageById } from "@/lib/catalogImages";
 import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
-import { API_URL } from "@/lib/api";
+import { getPublicApiBase } from "@/lib/api";
 
 export function Hero() {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -47,7 +47,7 @@ export function Hero() {
     return () => window.clearInterval(id);
   }, [looks.length]);
   useEffect(() => {
-    fetch(`${API_URL}/api/auth/me`, { credentials: "include" })
+    fetch(`${getPublicApiBase()}/api/auth/me`, { credentials: "include" })
       .then((r) => setIsLoggedIn(r.ok))
       .catch(() => setIsLoggedIn(false));
   }, []);

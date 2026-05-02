@@ -8,6 +8,7 @@ import type { Product } from "@/lib/types";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { notify } from "@/lib/notify";
+import { sameSiteImageSrc } from "@/lib/publicAssets";
 
 function cents(c: number) {
   return (c / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -35,7 +36,7 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
 
         <Image
-          src={product.images.primary}
+          src={sameSiteImageSrc(product.images.primary)}
           alt={product.title}
           fill
           quality={100}
@@ -43,7 +44,7 @@ export function ProductCard({ product }: { product: Product }) {
           className="object-contain bg-white transition duration-300 ease-out group-hover:scale-[1.03]"
         />
         <Image
-          src={product.images.secondary}
+          src={sameSiteImageSrc(product.images.secondary)}
           alt={`${product.title} secondary`}
           fill
           quality={100}
@@ -83,7 +84,7 @@ export function ProductCard({ product }: { product: Product }) {
                   {
                     productId: product._id,
                     title: product.title,
-                    image: product.images.primary,
+                    image: sameSiteImageSrc(product.images.primary),
                     variantLabel: v0?.label ?? "default",
                     unitPriceCents: v0?.priceCents ?? 0,
                   },

@@ -8,6 +8,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { notify } from "@/lib/notify";
 import { ProductCard } from "./ProductCard";
+import { sameSiteImageSrc } from "@/lib/publicAssets";
 
 function cents(c: number) {
   return (c / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -53,8 +54,10 @@ export function ProductDetailClient({ product, related }: { product: Product; re
   const [color, setColor] = useState(product.colors?.[0] ?? "Default");
   const [galleryIdx, setGalleryIdx] = useState(0);
   const v = useMemo(() => variants.find((x) => x.label === variant) ?? variants[0], [variants, variant]);
-  const gallery = [product.images.primary, product.images.secondary, ...(product.images.gallery ?? [])].filter(Boolean);
-  const currentImage = gallery[galleryIdx] ?? product.images.primary;
+  const gallery = [product.images.primary, product.images.secondary, ...(product.images.gallery ?? [])]
+    .filter(Boolean)
+    .map(sameSiteImageSrc);
+  const currentImage = gallery[galleryIdx] ?? sameSiteImageSrc(product.images.primary);
   const discountPct =
     v?.compareAtCents && v.compareAtCents > v.priceCents
       ? Math.round(((v.compareAtCents - v.priceCents) / v.compareAtCents) * 100)
@@ -155,7 +158,7 @@ export function ProductDetailClient({ product, related }: { product: Product; re
                     {
                       productId: product._id,
                       title: product.title,
-                      image: product.images.primary,
+                      image: sameSiteImageSrc(product.images.primary),
                       variantLabel: `${v?.label ?? "default"} / ${color}`,
                       unitPriceCents: v?.priceCents ?? 0,
                     },
