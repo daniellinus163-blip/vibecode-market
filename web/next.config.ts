@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["jsonwebtoken"],
   async redirects() {
     return [
       { source: "/profile", destination: "/settings", permanent: false },
