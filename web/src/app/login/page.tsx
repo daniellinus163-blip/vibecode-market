@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { apiPost, getPublicApiBase } from "@/lib/api";
+import { getOAuthRedirectBase } from "@/lib/oauthRedirect";
 import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
@@ -65,7 +66,7 @@ export default function LoginPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        redirectTo: `${getOAuthRedirectBase()}/auth/callback?next=${encodeURIComponent(nextPath)}`,
       },
     });
     if (oauthError) {

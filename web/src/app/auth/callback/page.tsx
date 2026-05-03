@@ -34,14 +34,23 @@ export default function AuthCallbackPage() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ accessToken, rememberMe: true }),
         });
-        if (!res.ok) throw new Error("sync_failed");
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+          throw new Error(
+            body.message ||
+              body.error ||
+              `Could not sync session (${res.status}). Run API on port 4000 from repo root or check server logs.`
+          );
+        }
         if (!alive) return;
         window.location.href = nextPath;
-      } catch {
+      } catch (e) {
         if (!alive) return;
-        setMessage(
-          "Google sign-in could not be completed. On localhost, run the API server on port 4000 (`npm run dev` from repo root), or set NEXT_PUBLIC_API_URL to your API URL."
-        );
+        const hint =
+          e instanceof Error
+            ? e.message
+            : "Google sign-in could not be completed. Run `npm run dev` from the repo root (starts Next + API), open the site at http://localhost:3000 (not 127.0.0.1), and add JWT_SECRET to server/.env.";
+        setMessage(hint);
       }
     })();
     return () => {

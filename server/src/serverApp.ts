@@ -36,7 +36,12 @@ export function createApp() {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    res.status(500).json({ error: "internal_error" });
+    console.error("[api]", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({
+      error: "internal_error",
+      ...(process.env.NODE_ENV !== "production" ? { message: msg } : {}),
+    });
   });
 
   return app;

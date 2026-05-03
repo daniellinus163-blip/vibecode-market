@@ -9,6 +9,12 @@ async function main() {
   if (!hasSupabaseEnv) {
     throw new Error("Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_ANON_KEY/NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
+  if (!process.env.JWT_SECRET?.trim()) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[server] JWT_SECRET is missing. Login and Google OAuth will fail until you set JWT_SECRET in server/.env (see server/.env.example)."
+    );
+  }
 
   const app = createApp();
   const server = http.createServer(app);

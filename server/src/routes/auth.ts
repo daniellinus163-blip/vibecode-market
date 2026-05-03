@@ -1,9 +1,23 @@
+import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
 import { z } from "zod";
 import { signAccessToken } from "../lib/jwt.js";
 import { supabase } from "../lib/supabase.js";
 
 export const authRouter = Router();
+
+/** Missing JWT_SECRET makes signAccessToken throw — returns JSON instead of crashing the process */
+function jwtConfigured(res: Response): boolean {
+  if (!process.env.JWT_SECRET?.trim()) {
+    res.status(503).json({
+      error: "jwt_secret_missing",
+      message:
+        "API misconfiguration: add JWT_SECRET to server/.env (same style as server/.env.example), then restart `npm run dev`.",
+    });
+    return false;
+  }
+  return true;
+}
 
 const PasswordSchema = z
   .string()
@@ -40,44 +54,48 @@ function setSupabaseSessionCookie(res: any, token?: string, rememberMe?: boolean
   });
 }
 
-async function registerHandler(req: any, res: any) {
-  if (!supabase) return res.status(500).json({ error: "supabase_not_configured" });
-  const parsed = RegisterSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "invalid_input" });
+async function registerHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!supabase) return res.status(500).json({ error: "supabase_not_configured" });
+    if (!jwtConfigured(res)) return;
+    const parsed = RegisterSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "invalid_input" });
 
-  const { email, password, name } = parsed.data;
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: name } },
-  });
-  if (error) {
-    if (/already/i.test(error.message)) {
-      // Smooth UX: if account exists and password matches, log user in.
-      const signIn = await supabase.auth.signInWithPassword({ email, password });
-      if (!signIn.error && signIn.data.user) {
-        const token = signAccessToken({
-          sub: signIn.data.user.id,
-          role: "user",
-          email: signIn.data.user.email ?? email,
-          name: (signIn.data.user.user_metadata?.full_name as string) ?? name,
-        });
-        setAuthCookie(res, token, true);
-        setSupabaseSessionCookie(res, signIn.data.session?.access_token, true);
-        return res.json({ ok: true, existingUser: true });
+    const { email, password, name } = parsed.data;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } },
+    });
+    if (error) {
+      if (/already/i.test(error.message)) {
+        const signIn = await supabase.auth.signInWithPassword({ email, password });
+        if (!signIn.error && signIn.data.user) {
+          const token = signAccessToken({
+            sub: signIn.data.user.id,
+            role: "user",
+            email: signIn.data.user.email ?? email,
+            name: (signIn.data.user.user_metadata?.full_name as string) ?? name,
+          });
+          setAuthCookie(res, token, true);
+          setSupabaseSessionCookie(res, signIn.data.session?.access_token, true);
+          return res.json({ ok: true, existingUser: true });
+        }
+        return res.status(409).json({ error: "email_in_use" });
       }
-      return res.status(409).json({ error: "email_in_use" });
+      return res.status(400).json({ error: "signup_failed", message: error.message });
     }
-    return res.status(400).json({ error: "signup_failed", message: error.message });
+
+    const userId = data.user?.id;
+    if (!userId) return res.status(400).json({ error: "signup_failed" });
+    const token = signAccessToken({ sub: userId, role: "user", email, name });
+    setAuthCookie(res, token, true);
+    setSupabaseSessionCookie(res, data.session?.access_token, true);
+
+    return res.json({ ok: true });
+  } catch (e) {
+    next(e);
   }
-
-  const userId = data.user?.id;
-  if (!userId) return res.status(400).json({ error: "signup_failed" });
-  const token = signAccessToken({ sub: userId, role: "user", email, name });
-  setAuthCookie(res, token, true);
-  setSupabaseSessionCookie(res, data.session?.access_token, true);
-
-  return res.json({ ok: true });
 }
 
 authRouter.post("/signup", registerHandler);
@@ -89,32 +107,37 @@ const LoginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
-authRouter.post("/login", async (req, res) => {
-  if (!supabase) return res.status(500).json({ error: "supabase_not_configured" });
-  const parsed = LoginSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "invalid_input", message: "Check email/password format." });
-  }
-
-  const { email, password, rememberMe } = parsed.data;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error || !data.user) {
-    const msg = error?.message ?? "";
-    if (/email not confirmed/i.test(msg)) {
-      return res.status(403).json({ error: "email_not_confirmed", message: "Please confirm your email first." });
+authRouter.post("/login", async (req, res, next) => {
+  try {
+    if (!supabase) return res.status(500).json({ error: "supabase_not_configured" });
+    if (!jwtConfigured(res)) return;
+    const parsed = LoginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "invalid_input", message: "Check email/password format." });
     }
-    return res.status(401).json({ error: "invalid_credentials", message: "Invalid email or password." });
-  }
-  const token = signAccessToken({
-    sub: data.user.id,
-    role: "user",
-    email: data.user.email ?? email,
-    name: (data.user.user_metadata?.full_name as string) ?? "",
-  });
-  setAuthCookie(res, token, rememberMe);
-  setSupabaseSessionCookie(res, data.session?.access_token, rememberMe);
 
-  return res.json({ ok: true });
+    const { email, password, rememberMe } = parsed.data;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) {
+      const msg = error?.message ?? "";
+      if (/email not confirmed/i.test(msg)) {
+        return res.status(403).json({ error: "email_not_confirmed", message: "Please confirm your email first." });
+      }
+      return res.status(401).json({ error: "invalid_credentials", message: "Invalid email or password." });
+    }
+    const token = signAccessToken({
+      sub: data.user.id,
+      role: "user",
+      email: data.user.email ?? email,
+      name: (data.user.user_metadata?.full_name as string) ?? "",
+    });
+    setAuthCookie(res, token, rememberMe);
+    setSupabaseSessionCookie(res, data.session?.access_token, rememberMe);
+
+    return res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
 });
 
 authRouter.post("/logout", async (req, res) => {
@@ -166,24 +189,29 @@ authRouter.post("/reset-password", async (_req, res) => {
   return res.status(400).json({ error: "use_supabase_reset_link" });
 });
 
-authRouter.post("/oauth/sync", async (req, res) => {
-  if (!supabase) return res.status(500).json({ error: "supabase_not_configured" });
-  const parsed = z.object({ accessToken: z.string().min(10), rememberMe: z.boolean().optional() }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "invalid_input" });
+authRouter.post("/oauth/sync", async (req, res, next) => {
+  try {
+    if (!supabase) return res.status(500).json({ error: "supabase_not_configured" });
+    if (!jwtConfigured(res)) return;
+    const parsed = z.object({ accessToken: z.string().min(10), rememberMe: z.boolean().optional() }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "invalid_input" });
 
-  const { accessToken, rememberMe } = parsed.data;
-  const { data, error } = await supabase.auth.getUser(accessToken);
-  if (error || !data.user) return res.status(401).json({ error: "invalid_oauth_session" });
+    const { accessToken, rememberMe } = parsed.data;
+    const { data, error } = await supabase.auth.getUser(accessToken);
+    if (error || !data.user) return res.status(401).json({ error: "invalid_oauth_session" });
 
-  const user = data.user;
-  const token = signAccessToken({
-    sub: user.id,
-    role: "user",
-    email: user.email ?? "",
-    name: (user.user_metadata?.full_name as string) ?? (user.user_metadata?.name as string) ?? "",
-  });
-  setAuthCookie(res, token, rememberMe);
-  setSupabaseSessionCookie(res, accessToken, rememberMe);
-  return res.json({ ok: true });
+    const user = data.user;
+    const token = signAccessToken({
+      sub: user.id,
+      role: "user",
+      email: user.email ?? "",
+      name: (user.user_metadata?.full_name as string) ?? (user.user_metadata?.name as string) ?? "",
+    });
+    setAuthCookie(res, token, rememberMe);
+    setSupabaseSessionCookie(res, accessToken, rememberMe);
+    return res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
 });
 

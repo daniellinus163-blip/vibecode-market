@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ALL_CLOTH_IMAGE_IDS, clothImageById } from "@/lib/catalogImages";
+import { getOAuthRedirectBase } from "@/lib/oauthRedirect";
 import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
 import { getPublicApiBase } from "@/lib/api";
 
@@ -68,7 +69,7 @@ export function Hero() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${getOAuthRedirectBase()}/auth/callback`,
       },
     });
     if (error) {

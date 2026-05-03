@@ -12,7 +12,9 @@ export function getPublicApiBase(): string {
   if (env) return env;
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1") return "http://127.0.0.1:4000";
+    // Cookies are host-scoped: localhost:* and 127.0.0.1:* do NOT share cookies — match API host to the page.
+    if (host === "localhost") return "http://localhost:4000";
+    if (host === "127.0.0.1") return "http://127.0.0.1:4000";
     return "";
   }
   return "http://127.0.0.1:4000";
