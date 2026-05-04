@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
-
-export const runtime = "nodejs";
 import { z } from "zod";
 import { createAnonSupabase } from "@/lib/supabaseServer";
+
+export const runtime = "nodejs";
 
 /**
  * Same behavior as server Express POST /api/auth/oauth/sync.
