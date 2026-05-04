@@ -4,13 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ALL_CLOTH_IMAGE_IDS, clothImageById } from "@/lib/catalogImages";
-import { getOAuthRedirectBase } from "@/lib/oauthRedirect";
-import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
 import { getPublicApiBase } from "@/lib/api";
+import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
 
 export function Hero() {
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleError, setGoogleError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const looks = useMemo(
@@ -47,36 +44,59 @@ export function Hero() {
     const id = window.setInterval(() => setIdx((x) => (x + 1) % looks.length), 2400);
     return () => window.clearInterval(id);
   }, [looks.length]);
-  useEffect(() => {
-    fetch(`${getPublicApiBase()}/api/auth/me`, { credentials: "include" })
-      .then((r) => setIsLoggedIn(r.ok))
-      .catch(() => setIsLoggedIn(false));
-  }, []);
-  const images = looks[idx];
 
-  async function signInWithGoogle() {
-    setGoogleError(null);
-    if (!hasSupabasePublicEnv) {
-      setGoogleError("Supabase public env is missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
-      return;
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = hasSupabasePublicEnv ? getSupabaseClient() : null;
+
+    async function fromApi(): Promise<boolean> {
+      try {
+        const r = await fetch(`${getPublicApiBase()}/api/auth/me`, { credentials: "include", cache: "no-store" });
+        return r.ok;
+      } catch {
+        return false;
+      }
     }
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      setGoogleError("Supabase client is not available.");
-      return;
+
+    async function fromSupabase(): Promise<boolean> {
+      if (!supabase) return false;
+      const { data } = await supabase.auth.getSession();
+      return Boolean(data.session?.access_token);
     }
-    setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${getOAuthRedirectBase()}/auth/callback`,
-      },
+
+    async function refresh() {
+      if (cancelled) return;
+      const apiOk = await fromApi();
+      if (cancelled) return;
+      if (apiOk) {
+        setIsLoggedIn(true);
+        return;
+      }
+      const sbOk = await fromSupabase();
+      if (!cancelled) setIsLoggedIn(sbOk);
+    }
+
+    void refresh();
+    const retry = window.setTimeout(() => void refresh(), 350);
+
+    const sub = supabase?.auth.onAuthStateChange(() => {
+      void refresh();
     });
-    if (error) {
-      setGoogleError("Google sign-in failed. Please try again.");
-      setGoogleLoading(false);
+
+    function onFocus() {
+      void refresh();
     }
-  }
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(retry);
+      sub?.data.subscription.unsubscribe();
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  const images = looks[idx];
 
   return (
     <section className="mx-auto mb-4 mt-4 max-w-7xl px-4">
@@ -94,7 +114,7 @@ export function Hero() {
           <p className="text-xs tracking-[0.2em] text-white/90">MARKETPLACE DEALS</p>
           <h1 className="mt-2 text-2xl font-semibold md:text-4xl">Shop fashion for every age group</h1>
           <p className="mt-2 text-sm text-white/90">Now showing: {images.label} style looks</p>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <Link href="/shop" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-primary">
               Shop Now
             </Link>
@@ -102,16 +122,14 @@ export function Hero() {
               Top Rated
             </Link>
             {!isLoggedIn ? (
-              <button
-                onClick={signInWithGoogle}
-                disabled={googleLoading}
-                className="rounded-full border border-white/80 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-70"
+              <Link
+                href="/login"
+                className="rounded-full border border-white/80 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
               >
-                {googleLoading ? "Connecting..." : "Continue with Google"}
-              </button>
+                Sign in
+              </Link>
             ) : null}
           </div>
-          {googleError ? <p className="mt-2 text-xs text-rose-200">{googleError}</p> : null}
         </div>
       </div>
       <div className="mt-3 overflow-hidden rounded-xl border border-black/10 bg-white p-2">
@@ -126,4 +144,3 @@ export function Hero() {
     </section>
   );
 }
-
