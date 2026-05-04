@@ -47,7 +47,7 @@ export default function SignupPage() {
           body.existingUser ? "Welcome back — we signed you in. Redirecting…" : "Account created successfully. Redirecting…"
         );
         window.setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/settings";
         }, 900);
         return;
       }
@@ -98,7 +98,7 @@ export default function SignupPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${getOAuthRedirectBase()}/auth/callback`,
+        redirectTo: `${getOAuthRedirectBase()}/auth/callback?next=${encodeURIComponent("/settings")}`,
       },
     });
     if (oauthError) {

@@ -2,17 +2,9 @@ import { apiGet } from "@/lib/api";
 import type { Product } from "@/lib/types";
 import { ProductDetailClient } from "@/components/shop/ProductDetailClient";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const cookieStore = await cookies();
-  const appJwt = cookieStore.get("access_token")?.value;
-  const supabaseSession = cookieStore.get("sb_access_token")?.value;
-  if (!appJwt && !supabaseSession) {
-    redirect(`/login?next=${encodeURIComponent(`/product/${slug}`)}`);
-  }
   let product: Product | null = null;
   try {
     const res = await apiGet<{ product: Product }>(`/api/products/${slug}`);

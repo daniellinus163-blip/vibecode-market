@@ -18,6 +18,15 @@ export function createAnonSupabase() {
   return createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+/** RLS queries as the logged-in user (pass Supabase session JWT from cookie). */
+export function createUserScopedSupabase(sbAccessToken: string) {
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${sbAccessToken}` } },
+  });
+}
+
 function columnMissingFromPostgrest(msg: string, columnName: string) {
   const m = msg.toLowerCase();
   const col = columnName.toLowerCase();

@@ -123,7 +123,7 @@ export function Hero() {
             </Link>
             {!isLoggedIn ? (
               <Link
-                href="/login"
+                href="/login?next=/settings"
                 className="rounded-full border border-white/80 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
               >
                 Sign in

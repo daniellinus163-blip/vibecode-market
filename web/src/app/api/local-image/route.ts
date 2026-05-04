@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       return new Response(buffer, {
         headers: {
           "content-type": ct,
-          "cache-control": "public, max-age=86400",
+          "cache-control": "public, max-age=31536000, immutable",
         },
       });
     } catch {

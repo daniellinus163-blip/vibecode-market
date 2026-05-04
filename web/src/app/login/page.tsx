@@ -17,8 +17,8 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const nextPath =
     typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("next") || "/account"
-      : "/account";
+      ? new URLSearchParams(window.location.search).get("next") || "/settings"
+      : "/settings";
 
   async function submit() {
     setBusy(true);

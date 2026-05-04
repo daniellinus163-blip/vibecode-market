@@ -17,6 +17,9 @@ export function getPublicApiBase(): string {
     if (host === "127.0.0.1") return "http://127.0.0.1:4000";
     return "";
   }
+  // SSR / server: Vercel provides VERCEL_URL so fetches hit this deployment (Next API routes), not localhost.
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
   return "http://127.0.0.1:4000";
 }
 

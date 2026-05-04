@@ -8,8 +8,8 @@ export default function AuthCallbackPage() {
   const [message, setMessage] = useState("Finishing Google sign-in...");
   const nextPath =
     typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("next") || "/"
-      : "/";
+      ? new URLSearchParams(window.location.search).get("next") || "/settings"
+      : "/settings";
 
   useEffect(() => {
     let alive = true;
