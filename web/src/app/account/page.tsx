@@ -188,15 +188,26 @@ export default function AccountPage() {
                             try {
                               const fd = new FormData();
                               fd.append("file", file);
-                              const res = await fetch("/api/avatar-upload", { method: "POST", body: fd });
-                              const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-                              if (!res.ok || !body.url) throw new Error(body.error || "upload_failed");
+                              const res = await fetch("/api/avatar-upload", {
+                                method: "POST",
+                                body: fd,
+                                credentials: "include",
+                              });
+                              const body = (await res.json().catch(() => ({}))) as {
+                                url?: string;
+                                error?: string;
+                                hint?: string;
+                                detail?: string;
+                              };
+                              if (!res.ok || !body.url) {
+                                throw new Error(body.hint || body.detail || body.error || "upload_failed");
+                              }
                               const safe = sanitizeAvatar(body.url);
                               setProfileForm((f) => ({ ...f, avatarUrl: safe }));
                               window.localStorage.setItem(AVATAR_STORAGE_KEY, safe);
                               setMessage("Photo uploaded. Click Save profile.");
-                            } catch {
-                              setError("Could not upload photo.");
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : "Could not upload photo.");
                             }
                           }}
                           className="text-xs"

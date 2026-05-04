@@ -280,10 +280,10 @@ export default function SettingsPage() {
     setError(null);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/avatar-upload", { method: "POST", body: fd });
-    const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+    const res = await fetch("/api/avatar-upload", { method: "POST", body: fd, credentials: "include" });
+    const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; hint?: string; detail?: string };
     if (!res.ok || !body.url) {
-      setError(body.error || "Avatar upload failed.");
+      setError(body.hint || body.detail || body.error || "Avatar upload failed.");
       return;
     }
     setProfile((p) => ({ ...p, avatar_url: body.url! }));
