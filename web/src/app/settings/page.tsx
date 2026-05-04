@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type ProfileRow = {
@@ -47,7 +48,6 @@ type NotificationPrefs = {
   new_arrivals: boolean;
 };
 
-const AVATAR_STORAGE_KEY = "vibecode_avatar_url";
 const LOCAL_PROFILE_KEY = "vibecode_profile_fallback";
 const LOCAL_NOTIFICATION_KEY = "vibecode_notification_settings";
 const LOCAL_ADDRESSES_KEY = "vibecode_addresses";
@@ -61,6 +61,20 @@ function isMissingTableError(msg?: string) {
 function isMissingColumnError(msg?: string) {
   const m = String(msg ?? "").toLowerCase();
   return m.includes("could not find the") && m.includes("column");
+}
+
+/** Prefer OAuth/metadata username; otherwise email local-part, then first token of display name. */
+function profileDefaultsFromAuthUser(user: User) {
+  const email = String(user.email ?? "").trim();
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const fullName = String(meta.full_name ?? meta.name ?? "").trim();
+  let username = String(meta.username ?? meta.preferred_username ?? meta.user_name ?? "").trim();
+  if (!username && email) username = email.split("@")[0] ?? "";
+  if (!username && fullName) {
+    const first = fullName.split(/\s+/)[0] ?? "";
+    username = first.toLowerCase().replace(/[^a-z0-9._-]/g, "") || first;
+  }
+  return { email, full_name: fullName, username };
 }
 
 export default function SettingsPage() {
@@ -133,7 +147,7 @@ export default function SettingsPage() {
       setUserId(user.id);
       setUserEmail(user.email ?? "");
       await Promise.all([
-        loadProfile(user.id, user.email ?? ""),
+        loadProfile(user),
         loadAddresses(user.id),
         loadOrders(user.id),
         loadWishlist(user.id),
@@ -146,46 +160,47 @@ export default function SettingsPage() {
     });
   }, [router, supabase]);
 
-  async function loadProfile(uid: string, email: string) {
+  async function loadProfile(user: User) {
     if (!supabase) return;
+    const uid = user.id;
+    const defaults = profileDefaultsFromAuthUser(user);
     const { data, error } = await supabase.from("profiles").select("id,full_name,username,avatar_url,updated_at,email").eq("id", uid).maybeSingle();
     if (error && isMissingColumnError(error.message)) {
-      const [basic, authUser] = await Promise.all([
+      const [basic, authSnapshot] = await Promise.all([
         supabase.from("profiles").select("id").eq("id", uid).maybeSingle(),
         supabase.auth.getUser(),
       ]);
       if (!basic.error) {
-        const meta = (authUser.data.user?.user_metadata ?? {}) as Record<string, unknown>;
+        const meta = (authSnapshot.data.user?.user_metadata ?? {}) as Record<string, unknown>;
         let local: Record<string, string> = {};
         if (typeof window !== "undefined") {
           try {
             local = JSON.parse(window.localStorage.getItem(LOCAL_PROFILE_KEY) ?? "{}") as Record<string, string>;
           } catch {}
         }
+        const full_name = String(meta.full_name ?? local.full_name ?? "").trim() || defaults.full_name;
+        const username = String(meta.username ?? local.username ?? "").trim() || defaults.username;
         setProfile({
           id: uid,
-          full_name: String(meta.full_name ?? local.full_name ?? ""),
-          username: String(meta.username ?? local.username ?? ""),
-          avatar_url: String(
-            meta.avatar_url ??
-              (typeof window !== "undefined" ? window.localStorage.getItem(AVATAR_STORAGE_KEY) ?? "" : "") ??
-              local.avatar_url ??
-              ""
-          ),
+          full_name,
+          username,
+          avatar_url: "",
           updated_at: "",
-          email,
+          email: defaults.email,
         });
         return;
       }
     }
     const row = data as ProfileRow | null;
+    const full_name = String(row?.full_name ?? "").trim() || defaults.full_name;
+    const username = String(row?.username ?? "").trim() || defaults.username;
     setProfile({
       id: uid,
-      full_name: row?.full_name ?? "",
-      username: row?.username ?? "",
-      avatar_url: row?.avatar_url ?? (typeof window !== "undefined" ? window.localStorage.getItem(AVATAR_STORAGE_KEY) ?? "" : ""),
+      full_name,
+      username,
+      avatar_url: "",
       updated_at: row?.updated_at ?? "",
-      email: row?.email ?? email,
+      email: defaults.email,
     });
   }
 
@@ -274,23 +289,6 @@ export default function SettingsPage() {
     if (data) setNotificationPrefs(data as NotificationPrefs);
   }
 
-  async function uploadAvatar(file?: File) {
-    if (!file) return;
-    setMessage(null);
-    setError(null);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/avatar-upload", { method: "POST", body: fd, credentials: "include" });
-    const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; hint?: string; detail?: string };
-    if (!res.ok || !body.url) {
-      setError(body.hint || body.detail || body.error || "Avatar upload failed.");
-      return;
-    }
-    setProfile((p) => ({ ...p, avatar_url: body.url! }));
-    if (typeof window !== "undefined") window.localStorage.setItem(AVATAR_STORAGE_KEY, body.url);
-    setMessage("Avatar uploaded. Click Save Profile.");
-  }
-
   async function saveProfile() {
     if (!supabase || !userId) return;
     setSaving(true);
@@ -299,7 +297,6 @@ export default function SettingsPage() {
     const patch: Record<string, unknown> = {
       full_name: profile.full_name || null,
       username: profile.username || null,
-      avatar_url: profile.avatar_url || null,
       email: userEmail,
       updated_at: new Date().toISOString(),
     };
@@ -309,15 +306,12 @@ export default function SettingsPage() {
       const metaPayload = {
         full_name: String(profile.full_name ?? ""),
         username: String(profile.username ?? ""),
-        avatar_url: String(profile.avatar_url ?? ""),
       };
       const metaRes = await supabase.auth.updateUser({
-        email: String(profile.email ?? "").trim() || undefined,
         data: metaPayload,
       });
       if (typeof window !== "undefined") {
         window.localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(metaPayload));
-        if (metaPayload.avatar_url) window.localStorage.setItem(AVATAR_STORAGE_KEY, metaPayload.avatar_url);
       }
       if (!e1 && !metaRes.error) {
         setMessage("Profile saved successfully.");
@@ -330,8 +324,7 @@ export default function SettingsPage() {
         return;
       }
     }
-    const { error: e2 } = await supabase.auth.updateUser({ email: String(profile.email ?? "").trim() || undefined });
-    if (e1 || e2) setError(e1?.message || e2?.message || "Failed to update profile.");
+    if (e1) setError(e1.message || "Failed to update profile.");
     else setMessage("Profile updated successfully.");
     setSaving(false);
   }
@@ -532,11 +525,13 @@ export default function SettingsPage() {
               <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                 <input value={profile.full_name ?? ""} onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))} placeholder="Full name" className="rounded-lg border border-black/15 px-3 py-2 text-sm" />
                 <input value={profile.username ?? ""} onChange={(e) => setProfile((p) => ({ ...p, username: e.target.value }))} placeholder="Username" className="rounded-lg border border-black/15 px-3 py-2 text-sm" />
-                <input value={profile.email ?? ""} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} placeholder="Email" className="rounded-lg border border-black/15 px-3 py-2 text-sm md:col-span-2" />
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                {profile.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="h-16 w-16 rounded-full border border-black/10 object-cover" /> : <div className="h-16 w-16 rounded-full border border-black/10 bg-black/5" />}
-                <input type="file" accept="image/*" className="text-sm" onChange={(e) => void uploadAvatar(e.target.files?.[0])} />
+                <input
+                  readOnly
+                  value={profile.email ?? userEmail ?? ""}
+                  placeholder="Email"
+                  title="Email matches your signed-in account."
+                  className="rounded-lg border border-black/15 bg-black/[0.03] px-3 py-2 text-sm text-black/70 md:col-span-2"
+                />
               </div>
               <button disabled={saving} onClick={() => void saveProfile()} className="mt-4 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-secondary disabled:opacity-60">
                 Save profile
