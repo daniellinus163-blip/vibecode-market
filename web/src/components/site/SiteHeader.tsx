@@ -10,7 +10,6 @@ import { sameSiteImageSrc } from "@/lib/publicAssets";
 const AVATAR_STORAGE_KEY = "vibecode_avatar_url";
 const REMOVED_IMAGE_TOKEN = "78367fb2-5e83-4160-a25a-5b66808fa94f";
 const REMOVED_IMAGE_TOKEN_2 = "7eb5b29f-3002-44bf-b060-48fdd7cda0a4";
-const OWNER_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_OWNER_EMAIL ?? "daniellinus163@gmail.com").toLowerCase();
 
 export function SiteHeader() {
   const items = useCartStore((s) => s.items);
@@ -19,6 +18,7 @@ export function SiteHeader() {
   const [darkMode, setDarkMode] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showOwner, setShowOwner] = useState(false);
 
   function sanitizeAvatar(url: string) {
     if (!url) return "";
@@ -54,13 +54,13 @@ export function SiteHeader() {
         if (typeof url === "string" && url.length > 0) setAvatarUrl(url);
       })
       .catch(() => {});
-    fetch(`${getPublicApiBase()}/api/auth/me`, { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((r) => {
-        const email = String(r?.user?.email ?? "").toLowerCase();
-        setShowAdmin(email === OWNER_EMAIL);
-      })
+    const base = getPublicApiBase();
+    fetch(`${base}/api/admin/overview`, { credentials: "include" })
+      .then((r) => setShowAdmin(r.ok))
       .catch(() => setShowAdmin(false));
+    fetch(`${base}/api/owner/session`, { credentials: "include" })
+      .then((r) => setShowOwner(r.ok))
+      .catch(() => setShowOwner(false));
 
     const onStorage = () => {
       const next = window.localStorage.getItem(AVATAR_STORAGE_KEY) ?? "";
@@ -117,6 +117,11 @@ export function SiteHeader() {
           <Link className="text-sm text-black/75 hover:text-black transition-colors" href="/shop">
             Shop
           </Link>
+          {showOwner ? (
+            <Link className="text-sm text-black/75 hover:text-black transition-colors" href="/owner">
+              Customers
+            </Link>
+          ) : null}
           {showAdmin ? (
             <Link className="text-sm text-black/75 hover:text-black transition-colors" href="/admin">
               Admin

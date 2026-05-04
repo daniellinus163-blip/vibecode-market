@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Category } from "@/lib/types";
-import { applyFiltersAndSort, getCatalogProducts } from "@/lib/catalogMockProducts";
+import { getMergedCatalogProducts } from "@/lib/catalogDbMerge";
+import { applyFiltersAndSort } from "@/lib/catalogMockProducts";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
   const minRating = Number(searchParams.get("minRating") ?? 0);
   const sort = searchParams.get("sort") ?? "newest";
 
-  const items = applyFiltersAndSort(getCatalogProducts(), {
+  const merged = await getMergedCatalogProducts();
+  const items = applyFiltersAndSort(merged, {
     category,
     q,
     badge,

@@ -7,6 +7,7 @@ import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { NotificationHub } from "@/components/site/NotificationHub";
 import { FashionStylistChat } from "@/components/site/FashionStylistChat";
 import { SupabaseOAuthRecovery } from "@/components/site/SupabaseOAuthRecovery";
+import { SiteMusic } from "@/components/site/SiteMusic";
 
 export const metadata: Metadata = {
   title: "VIBECODE — Premium Clothing",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <PageTransition>{children}</PageTransition>
           <MobileBottomNav />
           <FashionStylistChat />
+          <SiteMusic />
         </Providers>
       </body>
     </html>

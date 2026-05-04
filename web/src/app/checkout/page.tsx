@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState("");
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const [address, setAddress] = useState({
     fullName: "",
@@ -46,6 +47,7 @@ export default function CheckoutPage() {
 
   async function placeOrder() {
     setPlacing(true);
+    setCheckoutError(null);
     try {
       const res = await apiPost<{ orderId: string }>("/api/orders/checkout", {
         items: items.map((x) => ({
@@ -67,6 +69,9 @@ export default function CheckoutPage() {
       setOrderId(res.orderId);
       clear();
       setStep(3);
+    } catch (e) {
+      const msg = String(e instanceof Error ? e.message : e);
+      setCheckoutError(msg || "Could not place order.");
     } finally {
       setPlacing(false);
     }
@@ -90,6 +95,10 @@ export default function CheckoutPage() {
           />
         </Progress.Root>
       </div>
+
+      {checkoutError ? (
+        <div className="mt-4 rounded-xl border border-rose-400/40 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">{checkoutError}</div>
+      ) : null}
 
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-12">
         <div className="md:col-span-7">

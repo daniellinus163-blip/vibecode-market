@@ -51,7 +51,10 @@ export async function apiPost<T>(path: string, body: unknown, init?: RequestInit
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
+  if (!res.ok) {
+    const j = (await res.json().catch(() => ({}))) as { hint?: string; message?: string; error?: string };
+    throw new Error(j.hint || j.message || j.error || `API error ${res.status}`);
+  }
   return (await res.json()) as T;
 }
 

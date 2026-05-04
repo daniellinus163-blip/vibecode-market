@@ -101,3 +101,37 @@ export async function requireAdminUser() {
   }
   return { ok: true as const, userId, email, service };
 }
+
+const OWNER_ACCOUNT_EMAIL = (process.env.OWNER_EMAIL ?? DEFAULT_OWNER_EMAIL).toLowerCase().trim();
+
+/**
+ * Strict gate: only the configured owner Gmail can call owner-only APIs (customer list).
+ * Requires service role so `auth.admin.listUsers` can run.
+ */
+export async function requireOwnerUser() {
+  const missing: string[] = [];
+  if (!supabaseUrl) missing.push("SUPABASE_URL");
+  if (!supabaseAnonKey) missing.push("SUPABASE_ANON_KEY");
+  if (!supabaseServiceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (missing.length > 0) {
+    return { ok: false as const, status: 500, error: `owner_env_missing:${missing.join(",")}` };
+  }
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sb_access_token")?.value;
+  if (!token) return { ok: false as const, status: 401, error: "unauthorized" };
+
+  const anon = createAnonSupabase();
+  const service = createServiceSupabase();
+  if (!anon || !service) return { ok: false as const, status: 500, error: "owner_supabase_client_unavailable" };
+
+  const { data: authData, error: authErr } = await anon.auth.getUser(token);
+  if (authErr || !authData.user) return { ok: false as const, status: 401, error: "unauthorized" };
+
+  const userId = authData.user.id;
+  const email = (authData.user.email ?? "").toLowerCase().trim();
+
+  if (email !== OWNER_ACCOUNT_EMAIL) return { ok: false as const, status: 403, error: "forbidden" };
+
+  return { ok: true as const, userId, email, service };
+}

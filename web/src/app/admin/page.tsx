@@ -17,8 +17,7 @@ type AdminVideo = { id: string; title: string; embed_url: string; created_at: st
 
 export default function AdminPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<"dashboard" | "users" | "products" | "videos">("dashboard");
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [tab, setTab] = useState<"dashboard" | "products" | "videos">("dashboard");
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [videos, setVideos] = useState<AdminVideo[]>([]);
   const [counts, setCounts] = useState({ users: 0, products: 0, videos: 0 });
@@ -40,20 +39,18 @@ export default function AdminPage() {
       setLoading(true);
       setError(null);
       setWarnings([]);
-      const [overview, usersRes, productsRes, videosRes] = await Promise.all([
+      const [overview, productsRes, videosRes] = await Promise.all([
         api<{
           counts: { users: number; products: number; videos: number };
           recentSignups: AdminUser[];
           warnings?: string[];
         }>("/api/admin/overview"),
-        api<{ users: AdminUser[] }>("/api/admin/users"),
         api<{ products: AdminProduct[] }>("/api/admin/products"),
         api<{ videos: AdminVideo[] }>("/api/admin/videos"),
       ]);
       setCounts(overview.counts);
       setRecentSignups(overview.recentSignups ?? []);
       setWarnings(overview.warnings ?? []);
-      setUsers(usersRes.users ?? []);
       setProducts(productsRes.products ?? []);
       setVideos(videosRes.videos ?? []);
       setLoading(false);
@@ -114,7 +111,6 @@ export default function AdminPage() {
           <div className="mt-4 space-y-2">
             {[
               ["dashboard", "Dashboard"],
-              ["users", "Users"],
               ["products", "Products"],
               ["videos", "Videos"],
             ].map(([key, label]) => (
@@ -145,7 +141,7 @@ export default function AdminPage() {
                 <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px]">web/supabase-admin-schema.sql</code>{" "}
                 (full admin tables) or{" "}
                 <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px]">web/supabase-fashion-videos-only.sql</code>{" "}
-                (videos only), then run.
+                (videos only), or <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px]">web/supabase-orders-schema.sql</code> for checkout, then run.
               </p>
             </div>
           ) : null}
@@ -159,6 +155,9 @@ export default function AdminPage() {
               </div>
               <div className="rounded-2xl border border-black/10 bg-white p-5">
                 <h2 className="text-lg font-semibold">Recent signups</h2>
+                <p className="mt-1 text-xs text-black/55">
+                  Full merged Auth + profile list (owner only) lives at <strong>/owner</strong>.
+                </p>
                 <div className="mt-3 space-y-2">
                   {recentSignups.map((u) => (
                     <div key={u.id} className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-2 text-sm">
@@ -169,32 +168,6 @@ export default function AdminPage() {
                 </div>
               </div>
             </>
-          ) : null}
-
-          {tab === "users" ? (
-            <div className="rounded-2xl border border-black/10 bg-white p-5">
-              <h2 className="text-lg font-semibold">All Users ({users.length})</h2>
-              <div className="mt-3 overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-black/60">
-                      <th className="py-2">Email</th>
-                      <th className="py-2">Signup date</th>
-                      <th className="py-2">Admin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u) => (
-                      <tr key={u.id} className="border-t border-black/10">
-                        <td className="py-2">{u.email}</td>
-                        <td className="py-2">{new Date(u.created_at).toLocaleString()}</td>
-                        <td className="py-2">{u.is_admin ? "Yes" : "No"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           ) : null}
 
           {tab === "products" ? (
