@@ -1,16 +1,12 @@
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { jwtSecret } from "@/lib/jwtSecret";
 import { createAnonSupabase } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 /** Avoid env being inlined at build with an empty value; Vercel injects secrets at runtime. */
 export const dynamic = "force-dynamic";
-
-function jwtSecret(): string | undefined {
-  const v = process.env["JWT_SECRET"];
-  return typeof v === "string" ? v.trim() : undefined;
-}
 
 /**
  * Same behavior as server Express POST /api/auth/oauth/sync.
