@@ -4,6 +4,13 @@ import { z } from "zod";
 import { createAnonSupabase } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
+/** Avoid env being inlined at build with an empty value; Vercel injects secrets at runtime. */
+export const dynamic = "force-dynamic";
+
+function jwtSecret(): string | undefined {
+  const v = process.env["JWT_SECRET"];
+  return typeof v === "string" ? v.trim() : undefined;
+}
 
 /**
  * Same behavior as server Express POST /api/auth/oauth/sync.
@@ -23,7 +30,7 @@ type JwtPayload = {
 };
 
 function signAccessToken(payload: JwtPayload) {
-  const secret = process.env.JWT_SECRET?.trim();
+  const secret = jwtSecret();
   if (!secret) throw new Error("Missing JWT_SECRET");
   return jwt.sign(payload, secret, { expiresIn: "7d" });
 }
@@ -33,7 +40,7 @@ export async function POST(req: Request) {
   if (!supabase) {
     return NextResponse.json({ error: "supabase_not_configured" }, { status: 500 });
   }
-  if (!process.env.JWT_SECRET?.trim()) {
+  if (!jwtSecret()) {
     return NextResponse.json(
       {
         error: "jwt_secret_missing",
