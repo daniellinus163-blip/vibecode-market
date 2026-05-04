@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/supabaseServer";
+import { isMissingTableError } from "@/lib/supabaseTableErrors";
 
 function columnMissing(msg: string, column: string) {
   const m = msg.toLowerCase();
@@ -16,6 +17,7 @@ export async function GET() {
     .select("id,name,price,image_url,category,description,created_at")
     .order("created_at", { ascending: false });
   if (!full.error) return NextResponse.json({ products: full.data ?? [] });
+  if (isMissingTableError(full.error.message)) return NextResponse.json({ products: [] });
   if (!columnMissing(full.error.message ?? "", "category")) {
     return NextResponse.json({ error: full.error.message }, { status: 500 });
   }

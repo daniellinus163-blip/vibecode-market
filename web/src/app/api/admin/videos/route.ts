@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/supabaseServer";
+import { isMissingTableError } from "@/lib/supabaseTableErrors";
 
 export async function GET() {
   const admin = await requireAdminUser();
@@ -8,7 +9,10 @@ export async function GET() {
     .from("fashion_videos")
     .select("id,title,embed_url,created_at")
     .order("created_at", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (isMissingTableError(error.message)) return NextResponse.json({ videos: [] });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ videos: data ?? [] });
 }
 
@@ -20,6 +24,17 @@ export async function POST(req: NextRequest) {
   const embed_url = String(body.embed_url ?? "").trim();
   if (!title || !embed_url) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   const { data, error } = await admin.service.from("fashion_videos").insert({ title, embed_url }).select("*").single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      return NextResponse.json(
+        {
+          error: "fashion_videos table missing",
+          hint: "Run web/supabase-fashion-videos-only.sql in Supabase SQL Editor, then retry.",
+        },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ video: data });
 }

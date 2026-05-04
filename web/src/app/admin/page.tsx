@@ -23,6 +23,7 @@ export default function AdminPage() {
   const [videos, setVideos] = useState<AdminVideo[]>([]);
   const [counts, setCounts] = useState({ users: 0, products: 0, videos: 0 });
   const [recentSignups, setRecentSignups] = useState<AdminUser[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [productForm, setProductForm] = useState({
@@ -38,14 +39,20 @@ export default function AdminPage() {
     (async () => {
       setLoading(true);
       setError(null);
+      setWarnings([]);
       const [overview, usersRes, productsRes, videosRes] = await Promise.all([
-        api<{ counts: { users: number; products: number; videos: number }; recentSignups: AdminUser[] }>("/api/admin/overview"),
+        api<{
+          counts: { users: number; products: number; videos: number };
+          recentSignups: AdminUser[];
+          warnings?: string[];
+        }>("/api/admin/overview"),
         api<{ users: AdminUser[] }>("/api/admin/users"),
         api<{ products: AdminProduct[] }>("/api/admin/products"),
         api<{ videos: AdminVideo[] }>("/api/admin/videos"),
       ]);
       setCounts(overview.counts);
       setRecentSignups(overview.recentSignups ?? []);
+      setWarnings(overview.warnings ?? []);
       setUsers(usersRes.users ?? []);
       setProducts(productsRes.products ?? []);
       setVideos(videosRes.videos ?? []);
@@ -125,6 +132,23 @@ export default function AdminPage() {
         <section className="space-y-4">
           {loading ? <div className="rounded-2xl border border-black/10 bg-white p-5 text-sm text-black/70">Loading admin data...</div> : null}
           {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">{error}</div> : null}
+          {!loading && warnings.length > 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+              <div className="font-semibold">Database setup</div>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-black/70">
+                In Supabase: open <strong>SQL Editor</strong>, paste{" "}
+                <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px]">web/supabase-admin-schema.sql</code>{" "}
+                (full admin tables) or{" "}
+                <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px]">web/supabase-fashion-videos-only.sql</code>{" "}
+                (videos only), then run.
+              </p>
+            </div>
+          ) : null}
 
           {tab === "dashboard" ? (
             <>
