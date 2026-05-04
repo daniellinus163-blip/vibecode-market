@@ -18,6 +18,16 @@ export default function AdminLoginPage() {
     if (q?.startsWith("/")) setNextPath(q);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/overview", { credentials: "include", cache: "no-store" }).then((r) => {
+      if (!cancelled && r.ok) router.replace("/admin");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);

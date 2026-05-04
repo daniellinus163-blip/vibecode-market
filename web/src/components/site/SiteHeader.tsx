@@ -17,7 +17,6 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const [showAdmin, setShowAdmin] = useState(false);
   const [showOwner, setShowOwner] = useState(false);
 
   function sanitizeAvatar(url: string) {
@@ -55,9 +54,6 @@ export function SiteHeader() {
       })
       .catch(() => {});
     const base = getPublicApiBase();
-    fetch(`${base}/api/admin/overview`, { credentials: "include" })
-      .then((r) => setShowAdmin(r.ok))
-      .catch(() => setShowAdmin(false));
     fetch(`${base}/api/owner/session`, { credentials: "include" })
       .then((r) => setShowOwner(r.ok))
       .catch(() => setShowOwner(false));
@@ -117,14 +113,15 @@ export function SiteHeader() {
           <Link className="text-sm text-black/75 hover:text-black transition-colors" href="/shop">
             Shop
           </Link>
+          <Link
+            className="text-sm font-semibold text-accent underline-offset-4 hover:underline"
+            href="/admin-login"
+          >
+            Admin login
+          </Link>
           {showOwner ? (
             <Link className="text-sm text-black/75 hover:text-black transition-colors" href="/owner">
               Customers
-            </Link>
-          ) : null}
-          {showAdmin ? (
-            <Link className="text-sm text-black/75 hover:text-black transition-colors" href="/admin">
-              Admin
             </Link>
           ) : null}
         </nav>

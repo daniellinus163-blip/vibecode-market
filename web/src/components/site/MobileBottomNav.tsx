@@ -13,6 +13,7 @@ export function MobileBottomNav() {
         <Link href="/cart" className="text-sm font-medium text-black/80" aria-label="Cart">
           🛒 {count > 0 ? `(${count})` : ""}
         </Link>
+        <Link href="/admin-login" className="text-sm font-semibold text-accent">Admin</Link>
         <Link href="/settings" className="text-sm font-medium text-black/80">⚙</Link>
       </div>
     </nav>
