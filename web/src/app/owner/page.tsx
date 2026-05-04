@@ -19,7 +19,7 @@ export default function OwnerCustomersPage() {
       try {
         const res = await fetch("/api/owner/users", { credentials: "include", cache: "no-store" });
         if (res.status === 401) {
-          router.replace("/login?next=/owner");
+          router.replace("/admin-login?next=/owner");
           return;
         }
         if (res.status === 403) {

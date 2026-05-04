@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import { verifyAdminDashboardToken } from "@/lib/adminDashboardJwt";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -51,6 +52,28 @@ export async function requireAdminUser() {
   }
 
   const cookieStore = await cookies();
+
+  const adminPanelTok = cookieStore.get("admin_dashboard_token")?.value;
+  if (adminPanelTok) {
+    const verified = verifyAdminDashboardToken(adminPanelTok);
+    const allowedEmail = (process.env.ADMIN_ACCESS_EMAIL ?? DEFAULT_OWNER_EMAIL).toLowerCase().trim();
+    if (verified?.email === allowedEmail) {
+      const anon = createAnonSupabase();
+      const service = createServiceSupabase() ?? anon;
+      if (!service) return { ok: false as const, status: 500, error: "admin_supabase_client_unavailable" };
+      if (missingServiceRole) {
+        return {
+          ok: true as const,
+          userId: verified.sub,
+          email: verified.email,
+          service,
+          degraded: true as const,
+        };
+      }
+      return { ok: true as const, userId: verified.sub, email: verified.email, service };
+    }
+  }
+
   const token = cookieStore.get("sb_access_token")?.value;
   if (!token) return { ok: false as const, status: 401, error: "unauthorized" };
 
@@ -118,6 +141,17 @@ export async function requireOwnerUser() {
   }
 
   const cookieStore = await cookies();
+
+  const adminPanelTok = cookieStore.get("admin_dashboard_token")?.value;
+  if (adminPanelTok) {
+    const verified = verifyAdminDashboardToken(adminPanelTok);
+    if (verified?.email === OWNER_ACCOUNT_EMAIL) {
+      const service = createServiceSupabase();
+      if (!service) return { ok: false as const, status: 500, error: "owner_supabase_client_unavailable" };
+      return { ok: true as const, userId: verified.sub, email: verified.email, service };
+    }
+  }
+
   const token = cookieStore.get("sb_access_token")?.value;
   if (!token) return { ok: false as const, status: 401, error: "unauthorized" };
 

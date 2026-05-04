@@ -58,7 +58,7 @@ export default function AdminPage() {
       setLoading(false);
       const msg = String(e?.message || "");
       if (msg.toLowerCase() === "unauthorized") {
-        router.replace("/login?next=/admin");
+        router.replace("/admin-login?next=/admin");
         return;
       }
       if (msg.toLowerCase() === "forbidden") {
@@ -102,6 +102,12 @@ export default function AdminPage() {
     setCounts((c) => ({ ...c, videos: Math.max(0, c.videos - 1) }));
   }
 
+  async function logoutAdminDashboard() {
+    await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
+    router.replace("/admin-login");
+    router.refresh();
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-4 pb-24 pt-8 text-primary">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr]">
@@ -123,6 +129,13 @@ export default function AdminPage() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => void logoutAdminDashboard()}
+            className="mt-6 w-full rounded-lg border border-black/15 px-3 py-2 text-left text-sm text-black/70 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800"
+          >
+            Sign out dashboard
+          </button>
         </aside>
 
         <section className="space-y-4">
