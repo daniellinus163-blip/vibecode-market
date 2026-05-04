@@ -126,7 +126,13 @@ export function SiteHeader() {
           ) : null}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <Link
+            href="/admin-login"
+            className="inline-flex items-center rounded-full border border-accent/60 bg-accent/15 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-primary hover:bg-accent/25 sm:px-3 sm:text-xs"
+          >
+            Admin
+          </Link>
           <Link
             href="/settings"
             className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-2 text-sm text-black transition hover:border-accent/60"
