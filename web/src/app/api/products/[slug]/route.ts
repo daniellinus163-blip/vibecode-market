@@ -4,8 +4,11 @@ import { getCatalogProducts } from "@/lib/catalogMockProducts";
 export const runtime = "nodejs";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
-  const { slug } = await ctx.params;
-  const product = getCatalogProducts().find((item) => item.slug === slug);
+  const { slug: rawSlug } = await ctx.params;
+  const slug = decodeURIComponent(rawSlug);
+  const catalog = getCatalogProducts();
+  const product =
+    catalog.find((item) => item.slug === slug) ?? catalog.find((item) => item._id === slug);
   if (!product) return NextResponse.json({ error: "not_found" }, { status: 404 });
   return NextResponse.json({ product });
 }

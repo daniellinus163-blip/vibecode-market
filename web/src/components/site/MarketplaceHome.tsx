@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { ProductCard } from "@/components/shop/ProductCard";
 import type { Category, Product } from "@/lib/types";
 import { getPublicApiBase } from "@/lib/api";
-import { clothPairByCategory } from "@/lib/catalogImages";
+import { getCatalogProducts } from "@/lib/catalogMockProducts";
 
 function firstPrice(p: Product) {
   return p.variants?.[0]?.priceCents ?? 0;
@@ -15,55 +14,9 @@ function discounted(p: Product) {
   return !!v?.compareAtCents && v.compareAtCents > v.priceCents;
 }
 
-function generateLocalProducts() {
-  const categories: Category[] = ["kids", "teens", "youth", "adults", "accessories"];
-  const namePool = ["Classic Tee", "Urban Hoodie", "Tailored Jacket", "Flex Jeans", "Sport Set", "Daily Cap", "Street Shirt", "Comfort Knit"];
-  const colorsPool = [["Black", "White"], ["Gold", "Black"], ["Navy", "White"], ["Olive", "Black"], ["Cream", "Gold"]];
-
-  const items: Product[] = [];
-  categories.forEach((category, cIdx) => {
-    for (let i = 0; i < 10; i++) {
-      const idx = cIdx * 10 + i;
-      const name = namePool[idx % namePool.length];
-      const price = 3900 + (idx % 14) * 850;
-      const compareAt = idx % 2 === 0 ? price + 1600 : undefined;
-      const { primary, secondary } = clothPairByCategory(category, i);
-      items.push({
-        _id: `local-${category}-${i + 1}`,
-        title: `${name} ${i + 1}`,
-        slug: `${category}-${name.toLowerCase().replace(/\s+/g, "-")}-${i + 1}`,
-        description: `${name} for ${category} with premium comfort and modern styling.`,
-        category,
-        badges: [
-          ...(i % 4 === 0 ? (["best_seller"] as const) : []),
-          ...(i % 5 === 0 ? (["trending"] as const) : []),
-          ...(i % 3 === 0 ? (["flash_sale"] as const) : []),
-          ...(i % 2 === 1 ? (["new_arrival"] as const) : []),
-        ],
-        images: {
-          primary,
-          secondary,
-          gallery: [primary, secondary],
-        },
-        colors: colorsPool[idx % colorsPool.length],
-        variants: [
-          { sku: `L-${idx}-S`, label: "S", priceCents: price, compareAtCents: compareAt, stock: 8 + (idx % 8) },
-          { sku: `L-${idx}-M`, label: "M", priceCents: price, compareAtCents: compareAt, stock: 6 + (idx % 8) },
-          { sku: `L-${idx}-L`, label: "L", priceCents: price + 300, compareAtCents: compareAt ? compareAt + 300 : undefined, stock: 4 + (idx % 8) },
-          { sku: `L-${idx}-XL`, label: "XL", priceCents: price + 600, compareAtCents: compareAt ? compareAt + 600 : undefined, stock: 2 + (idx % 6) },
-        ],
-        ratingAvg: Number((3.8 + (idx % 12) * 0.1).toFixed(1)),
-        ratingCount: 15 + idx * 2,
-        createdAt: new Date(Date.now() - idx * 86400000).toISOString(),
-      });
-    }
-  });
-  return items;
-}
-
 export function MarketplaceHome({ products }: { products: Product[] }) {
   const [allProducts, setAllProducts] = useState<Product[]>(() =>
-    (products?.length ?? 0) > 0 ? products : generateLocalProducts()
+    (products?.length ?? 0) > 0 ? products : getCatalogProducts()
   );
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [query, setQuery] = useState("");

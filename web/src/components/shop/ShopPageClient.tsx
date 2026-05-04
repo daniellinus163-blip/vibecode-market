@@ -5,9 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import type { Category, Product } from "@/lib/types";
 import { apiGet } from "@/lib/api";
+import { getCatalogProducts } from "@/lib/catalogMockProducts";
 import { ProductCard } from "./ProductCard";
 import { cn } from "@/lib/cn";
-import { clothPairByCategory } from "@/lib/catalogImages";
 
 const categories: { label: string; value?: Category }[] = [
   { label: "All" },
@@ -17,51 +17,6 @@ const categories: { label: string; value?: Category }[] = [
   { label: "Adults", value: "adults" },
   { label: "Accessories", value: "accessories" },
 ];
-
-function generateLocalProducts() {
-  const categoryPool: Category[] = ["kids", "teens", "youth", "adults", "accessories"];
-  const nameByCategory: Record<Category, string[]> = {
-    kids: ["Kids Graphic Tee", "Mini Hoodie", "Playtime Joggers", "School Day Shirt", "Color Pop Jacket", "Soft Knit Set", "Comfy Denim", "Weekend Polo", "Bright Sweatshirt", "Tiny Track Pants"],
-    teens: ["Teen Street Tee", "Oversized Hoodie", "Urban Denim", "Campus Bomber", "Casual Cargo", "Skater Shirt", "Layered Knit", "Zip Track Top", "City Fit Pants", "Everyday Crewneck"],
-    youth: ["Youth Core Tee", "Modern Utility Jacket", "Relaxed Cargo Pants", "Athleisure Set", "Downtown Shirt", "Signature Hoodie", "Slim Denim", "Daily Knit Top", "Street Bomber", "Flex Joggers"],
-    adults: ["Tailored Shirt", "Executive Polo", "Premium Chino", "Refined Knitwear", "Modern Blazer", "Classic Denim", "Smart Casual Tee", "Signature Jacket", "Elite Hoodie", "Weekend Trouser"],
-    accessories: ["Leather Crossbody", "Urban Backpack", "Fashion Cap", "Minimal Belt", "Sport Watch Strap", "Travel Pouch", "Canvas Tote", "Street Beanie", "Premium Wallet", "Style Sunglasses"],
-  };
-
-  const items: Product[] = [];
-  categoryPool.forEach((category, cIdx) => {
-    for (let i = 0; i < 10; i++) {
-      const idx = cIdx * 10 + i;
-      const { primary, secondary } = clothPairByCategory(category, i);
-      const price = 4900 + (idx % 12) * 900;
-      const compareAt = idx % 2 === 0 ? price + 1700 : undefined;
-      items.push({
-        _id: `shop-local-${category}-${i + 1}`,
-        title: nameByCategory[category][i],
-        slug: `shop-local-${category}-${i + 1}`,
-        description: `${nameByCategory[category][i]} designed for ${category} with premium comfort and modern style.`,
-        category,
-        badges: [
-          ...(i % 3 === 0 ? (["trending"] as const) : []),
-          ...(i % 4 === 0 ? (["best_seller"] as const) : []),
-          ...(i % 5 === 0 ? (["flash_sale"] as const) : []),
-        ],
-        images: { primary, secondary, gallery: [primary, secondary] },
-        colors: ["Black", "White", "Gold"],
-        variants: [
-          { sku: `SHOP-${idx}-S`, label: "S", priceCents: price, compareAtCents: compareAt, stock: 14 },
-          { sku: `SHOP-${idx}-M`, label: "M", priceCents: price, compareAtCents: compareAt, stock: 12 },
-          { sku: `SHOP-${idx}-L`, label: "L", priceCents: price + 300, compareAtCents: compareAt ? compareAt + 300 : undefined, stock: 10 },
-          { sku: `SHOP-${idx}-XL`, label: "XL", priceCents: price + 600, compareAtCents: compareAt ? compareAt + 600 : undefined, stock: 8 },
-        ],
-        ratingAvg: Number((4 + (idx % 8) * 0.1).toFixed(1)),
-        ratingCount: 20 + idx * 3,
-        createdAt: new Date(Date.now() - idx * 86400000).toISOString(),
-      });
-    }
-  });
-  return items;
-}
 
 function applyLocalFilters(
   items: Product[],
@@ -101,7 +56,7 @@ function useDebounced<T>(value: T, ms: number) {
 }
 
 export function ShopPageClient({ initialProducts }: { initialProducts: Product[] }) {
-  const localProducts = useMemo(() => generateLocalProducts(), []);
+  const localProducts = useMemo(() => getCatalogProducts(), []);
   const [category, setCategory] = useState<Category | undefined>(undefined);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounced(query, 160);

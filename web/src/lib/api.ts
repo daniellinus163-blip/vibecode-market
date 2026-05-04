@@ -3,24 +3,27 @@ function normalizeBase(url: string) {
 }
 
 /**
- * Browser: empty string → same-origin fetch (when Express isn’t deployed).
- * Server (SSR): defaults to local Express on 127.0.0.1:4000 when env unset.
- * Set NEXT_PUBLIC_API_URL to your deployed API (https://…) for production API + sockets.
+ * When NEXT_PUBLIC_API_URL is unset: browser uses same-origin (`''`) so `/api/*` Route Handlers work.
+ * SSR uses VERCEL_URL, NEXT_PUBLIC_SITE_URL, or `127.0.0.1:${PORT}` (default 3000).
+ * Set NEXT_PUBLIC_API_URL only if your API is hosted separately from this Next app.
  */
 export function getPublicApiBase(): string {
   const env = normalizeBase(process.env.NEXT_PUBLIC_API_URL?.trim() ?? "");
   if (env) return env;
+
+  // Next.js Route Handlers live on this app (`/api/*`). Same-origin avoids SSR pointing at a missing Express port.
   if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    // Cookies are host-scoped: localhost:* and 127.0.0.1:* do NOT share cookies — match API host to the page.
-    if (host === "localhost") return "http://localhost:4000";
-    if (host === "127.0.0.1") return "http://127.0.0.1:4000";
     return "";
   }
-  // SSR / server: Vercel provides VERCEL_URL so fetches hit this deployment (Next API routes), not localhost.
+
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://127.0.0.1:4000";
+
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (site) return normalizeBase(site);
+
+  const port = process.env.PORT?.trim() || "3000";
+  return `http://127.0.0.1:${port}`;
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
