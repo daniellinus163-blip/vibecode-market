@@ -1,7 +1,8 @@
-import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { signAppAccessToken } from "@/lib/appJwt";
 import { jwtSecret } from "@/lib/jwtSecret";
+import { setAuthCookiesOnResponse } from "@/lib/setAuthCookies";
 import { createAnonSupabase } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
@@ -17,19 +18,6 @@ const BodySchema = z.object({
   accessToken: z.string().min(10),
   rememberMe: z.boolean().optional(),
 });
-
-type JwtPayload = {
-  sub: string;
-  role: "user" | "admin";
-  email?: string;
-  name?: string;
-};
-
-function signAccessToken(payload: JwtPayload) {
-  const secret = jwtSecret();
-  if (!secret) throw new Error("Missing JWT_SECRET");
-  return jwt.sign(payload, secret, { expiresIn: "7d" });
-}
 
 export async function POST(req: Request) {
   const supabase = createAnonSupabase();
@@ -68,7 +56,7 @@ export async function POST(req: Request) {
   const user = data.user;
   let appToken: string;
   try {
-    appToken = signAccessToken({
+    appToken = signAppAccessToken({
       sub: user.id,
       role: "user",
       email: user.email ?? "",
@@ -82,23 +70,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const isProd = process.env.NODE_ENV === "production";
-  const maxAgeSec = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
-
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("access_token", appToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProd,
-    maxAge: maxAgeSec,
-    path: "/",
-  });
-  res.cookies.set("sb_access_token", accessToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProd,
-    maxAge: maxAgeSec,
-    path: "/",
-  });
+  setAuthCookiesOnResponse(res, { appToken, sbAccessToken: accessToken, rememberMe: Boolean(rememberMe) });
   return res;
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { apiPost } from "@/lib/api";
+import { getPublicApiBase } from "@/lib/api";
 import { getOAuthRedirectBase } from "@/lib/oauthRedirect";
 import { getSupabaseClient, hasSupabasePublicEnv } from "@/lib/supabaseClient";
 
@@ -26,23 +26,57 @@ export default function SignupPage() {
       setBusy(false);
       return;
     }
+
+    const base = getPublicApiBase();
     try {
-      await apiPost("/api/auth/register", { name, email, password });
-      setSuccess("Account created successfully. Redirecting...");
-      window.setTimeout(() => {
-        window.location.href = "/";
-      }, 900);
-    } catch {
-      try {
-        await apiPost("/api/auth/login", { email, password, rememberMe: true });
-        setSuccess("Welcome back — we signed you in.");
+      const res = await fetch(`${base}/api/auth/register`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        existingUser?: boolean;
+        error?: string;
+        message?: string;
+      };
+
+      if (res.ok) {
+        setSuccess(
+          body.existingUser ? "Welcome back — we signed you in. Redirecting…" : "Account created successfully. Redirecting…"
+        );
         window.setTimeout(() => {
           window.location.href = "/";
         }, 900);
         return;
-      } catch {
-        setError("Account already exists. Please login or use a different email.");
       }
+
+      if (body.error === "email_in_use") {
+        const loginRes = await fetch(`${base}/api/auth/login`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, password, rememberMe: true }),
+        });
+        const loginBody = (await loginRes.json().catch(() => ({}))) as { message?: string; error?: string };
+        if (loginRes.ok) {
+          setSuccess("Welcome back — we signed you in. Redirecting…");
+          window.setTimeout(() => {
+            window.location.href = "/";
+          }, 900);
+          return;
+        }
+        setError(
+          loginBody.message ||
+            "This email is already registered. Open Login and sign in with your password, or use Google."
+        );
+        return;
+      }
+
+      setError(body.message || body.error || `Could not create account (${res.status}).`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error. Try again.");
     } finally {
       setBusy(false);
     }
@@ -119,14 +153,14 @@ export default function SignupPage() {
 
         <button
           disabled={busy}
-          onClick={submit}
+          onClick={() => void submit()}
           className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-secondary transition hover:opacity-90 disabled:opacity-60"
         >
           {busy ? "Creating…" : "Create account"}
         </button>
         <button
           disabled={googleBusy}
-          onClick={googleSignIn}
+          onClick={() => void googleSignIn()}
           className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-black/20 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-accent/60 disabled:opacity-60"
         >
           {googleBusy ? "Connecting..." : "Continue with Google"}
@@ -142,4 +176,3 @@ export default function SignupPage() {
     </main>
   );
 }
-
